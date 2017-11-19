@@ -93,26 +93,15 @@ screen_name=[]
 num_favs=[]
 description=[]
 for tw in umich_tweets:
-	if len(tw['entities']['user_mentions'])>=1:
-		for a in tw['entities']['user_mentions']:
-			if a['id_str'] not in user_id:
-				user_id.append(a['id_str'])
-				username=a['screen_name'].lower()
-				screen_name.append(username)
-	if tw['user']['id_str'] not in user_id:
-		user_id.append(tw['user']['id_str'])
-		screen_name.append(tw['user']['id_str'])
-for username in screen_name:
-	user_obj= api.get_user(username)
-	num_favs.append(user_obj['favourites_count'])
-	description.append(user_obj['description'])
-umich_info=(umich_tweets[0]['user']['id_str'],umich_tweets[0]['user']['screen_name'],umich_tweets[0]['user']['favourites_count'],umich_tweets[0]['user']['description'])
-ulist=zip(user_id,screen_name, num_favs, description), umich_info
 
-
-for user in ulist:
-
-	cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES(?, ?, ?, ?)', user)
+	tup = tw['user']['id'], tw['user']['name']
+	print(tup)
+	cur.execute("SELECT * FROM Users WHERE Users.user_id = ?", (tw["id"],))
+	user_exists = cur.fetchall()
+	print(user_exists)
+	#print(len(user_exists))
+	if len(user_exists) ==0:
+		cur.execute('INSERT INTO Users (user_id, screen_name) VALUES (?, ? )', tup)
 conn.commit()
 
 # Put the rest of your caching setup here:
