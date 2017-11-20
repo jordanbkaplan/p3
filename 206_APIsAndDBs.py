@@ -18,7 +18,7 @@ import twitter_info_example # same deal as always...
 import json
 import sqlite3
 
-## Your name:
+## Your name: Jordan Kaplan
 ## The names of anyone you worked with on this project:
 
 #####
@@ -47,7 +47,7 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 ## CACHE_FNAME variable for you for the cache file name, but you must 
 ## write the rest of the code in this file.
 
-CACHE_FNAME = "206_APIsAndDBs_cache.json"
+CACHE_FNAME = "206_APIsAndDBs_cache.json" #caching function, gets tweet info from twitter using the api
 try:
     cache_file = open(CACHE_FNAME,'r')
     cache_contents = cache_file.read()
@@ -60,9 +60,14 @@ except:
 
 # Here, define a function called get_tweets that searches for all tweets referring to or by "umsi"
 # Your function must cache data it retrieves and rely on a cache file!
+conn=sqlite3.connect('206_APIsAndDBs.sqlite') #creates databases Tweets and Users but doesnt populate them
+cur=conn.cursor()
+cur.execute("DROP TABLE IF EXISTS Tweets")
+cur.execute("CREATE TABLE Tweets (tweet_id Text, text TEXT, user_posted INTEGER, time_posted DATE, retweets INTEGER, PRIMARY KEY(tweet_id))")
+cur.execute('DROP TABLE IF EXISTS Users')
+cur.execute('CREATE TABLE Users(user_id TEXT, screen_name TEXT, num_favs INTEGER, description TEXT, PRIMARY KEY(user_id))')
 
-
-def get_user_tweets(name):
+def get_user_tweets(name): #actually the caching function that caches for a specific parameter which is the user, needs a user 
     if name in CACHE_DICTION:
         print ('using cached data')
         twitter_results= CACHE_DICTION[name]
@@ -75,10 +80,7 @@ def get_user_tweets(name):
         f.close()
     return twitter_results
 
-conn=sqlite3.connect('206_APIsAndDBs.sqlite')
-cur=conn.cursor()
-cur.execute("DROP TABLE IF EXISTS Tweets")
-cur.execute("CREATE TABLE Tweets (tweet_id Text, text TEXT, user_posted INTEGER, time_posted DATE, retweets INTEGER, PRIMARY KEY(tweet_id))")
+
 umich_tweets=get_user_tweets("umich")
 
 for tw in umich_tweets:
@@ -86,8 +88,8 @@ for tw in umich_tweets:
     cur.execute('INSERT INTO Tweets (tweet_id, text, user_posted, time_posted, retweets) VALUES (?, ?, ?, ?, ?)',tup)
 conn.commit()
 
-cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute('CREATE TABLE Users(user_id TEXT, screen_name TEXT, num_favs INTEGER, description TEXT, PRIMARY KEY(user_id))')
+
+
 user_id=[]
 screen_name=[]
 num_favs=[]
@@ -106,11 +108,16 @@ for username in screen_name:
 	user_obj= api.get_user(username)
 	num_favs.append(user_obj['favourites_count'])
 	description.append(user_obj['description'])
+
 umich_info=(umich_tweets[0]['user']['id_str'],umich_tweets[0]['user']['screen_name'],umich_tweets[0]['user']['favourites_count'],umich_tweets[0]['user']['description'])
-ulist=zip(user_id,screen_name, num_favs, description), umich_info
+ulist=zip(user_id,screen_name, num_favs, description)
+qlist=[]
+for a in ulist:
+	qlist.append(a)
+qlist[0]=umich_info
 
-
-for user in ulist:
+	
+for user in qlist:
 
 	cur.execute('INSERT INTO Users (user_id, screen_name, num_favs, description) VALUES(?, ?, ?, ?)', user)
 conn.commit()
@@ -215,7 +222,7 @@ for string in strings:
 #for tup in tuples:
 	#joined_data.append(tup)
 	#print (joined_data)
-jd = cur.execute("SELECT Users.screen_name, Tweets.text FROM Users INNER JOIN Tweets on Users.user_id= Tweets.user_posted")
+jd = cur.execute("SELECT Users.screen_name, Tweets.text FROM Users INNER JOIN Tweets on Users.screen_name= Tweets.user_posted")
 joined_data=cur.fetchall()
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
@@ -227,8 +234,9 @@ joined_data=cur.fetchall()
 #for tup in tuples2:
 	#joined_data2.append(tup)
 	#print (joined_data2)
-jd2= cur.execute("SELECT Users.screen_name, Tweets.text FROM Users INNER JOIN Tweets on Users.user_id= Tweets.user_posted ORDER BY Tweets.retweets")
+jd2= cur.execute("SELECT Users.screen_name, Tweets.text FROM Users INNER JOIN Tweets on Users.screen_name= Tweets.user_posted ORDER BY Tweets.retweets")
 joined_data2= cur.fetchall()
+print (joined_data2)
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END 
 ### OF THE FILE HERE SO YOU DO NOT LOCK YOUR DATABASE (it's fixable, 
 ### but it's a pain). ###
